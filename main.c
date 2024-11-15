@@ -4,8 +4,9 @@
 #include <string.h>
 #include <stdio.h>
 #include "passwords/password.h"
+#include "devs/mukul.h"
 
-#define esc 27 
+#define esc 27  
 
 void activate_window(WINDOW *win, int pair){
     wattron(win, COLOR_PAIR(pair)); // Turn on color pair 1
@@ -15,16 +16,17 @@ void activate_window(WINDOW *win, int pair){
 }   
 
 int main() {
+    int menu_place = 1;
     int val;
-    // Initialize ncurses       
     passing(&val);
 
     if (val == 0){
         goto hi;
     }
+    // Initialize ncurses
     initscr();
     cbreak();
-    noecho();
+    noecho();   
     keypad(stdscr, TRUE);
     start_color();
 
@@ -39,17 +41,21 @@ int main() {
     WINDOW *top_win = newwin(8, COLS, 0, 0);
     refresh();
 
-    // Create menu items
-    ITEM *items[] = {
-        new_item("Add Books In Database", NULL),
-        new_item("Search Book From Database", NULL),
-        new_item("Add Customer In Database", NULL),
-        new_item("Search Customer From Database", NULL),
-        new_item("Delete Customer From Database", NULL),
-        new_item("Delete Book From Database", NULL),
-        new_item("Set New Password", NULL),
-        NULL
+    // Create menu items dynamically 
+    char *menu_options[] = {
+        "Add Books In Database",
+        "Search Book From Database",
+        "Add Customer In Database",
+        "Search Customer From Database",
+        "Delete Customer From Database",
+        "Delete Book From Database",
+        "Set New Password",
+        "Display All Books",
     };
+    ITEM *  items[sizeof(menu_options)/sizeof(menu_options[0])];   
+    for (int i = 0; i < sizeof(menu_options) / sizeof(menu_options[0]); ++i) {
+        items[i] = new_item(menu_options[i], NULL);
+    }
 
     // Create menu and associate it with the left window
     MENU *menu = new_menu(items);
@@ -79,13 +85,26 @@ int main() {
     int ch;
     while ((ch = getch()) != 'q') { // Press 'q' to exit
         switch (ch) {
-            case '\n': // Switch focus with enter    key
+            case '\n': // Switch focus with enter key
                 if (active_window == 1) {
                     active_window = 2;
                     activate_window(right_win, 1);
                     activate_window(left_win, 2);
                     mvwprintw(right_win, 1, 2, "");
-                    wrefresh(right_win);    
+                    main_loop(menu_place, right_win);
+                    wrefresh(right_win);
+
+                }
+                break;
+
+            case KEY_RIGHT:
+                if (active_window == 1) {
+                    active_window = 2;
+                    activate_window(right_win, 1);
+                       activate_window(left_win, 2);
+                    mvwprintw(right_win, 3, 2, "");
+                    main_loop(menu_place, right_win );
+                    wrefresh(right_win);
                 }
                 break;
             
@@ -102,24 +121,15 @@ int main() {
 
             case KEY_DOWN:
                 if (active_window == 1) {
+                    (menu_place<8)?(menu_place++):(menu_place=8);
                     menu_driver(menu, REQ_DOWN_ITEM);
                 }
                 break;
 
             case KEY_UP:
-                if (active_window == 1) {       
+                if (active_window == 1) {  
+                    (menu_place>1)?(menu_place--):(menu_place=1);
                     menu_driver(menu, REQ_UP_ITEM);
-                }
-                break;
-            
-            case KEY_RIGHT:
-                if (active_window == 1) {
-                    active_window = 2;
-                    activate_window(right_win, 1);
-                    activate_window(left_win, 2);
-
-                    mvwprintw(right_win, 3, 2, "");
-                    wrefresh(right_win);
                 }
                 break;
             
@@ -133,12 +143,10 @@ int main() {
                     mvwprintw(left_win, 1, 2, "");
                     wrefresh(left_win);  
                 }       
-                break; 
-
-                
+                break;
         }
 
-        // Refresh windows after any inp        ut
+        // Refresh windows after any input
         wrefresh(left_win);
         wrefresh(right_win);
     }
@@ -146,7 +154,7 @@ int main() {
     // Cleanup
     unpost_menu(menu);
     free_menu(menu);
-        for (int i = 0; i < 7; ++i) free_item(items[i]);
+        for (int i = 0; i < 8; ++i) free_item(items[i]);
     delwin(left_win);
     delwin(right_win);
     delwin(top_win);
