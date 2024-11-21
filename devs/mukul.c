@@ -12,6 +12,25 @@ struct library
     int bookno;
 };
 
+void take_input_assign_value(WINDOW *win, const char *prompt, char *input, int y, int x, int on_off){
+    mvwprintw(win, y, x, prompt);
+    wrefresh(win);
+    int ch, i = 0;
+    while ((ch = wgetch(win)) != '\n') {
+        if (ch == KEY_BACKSPACE || ch == 127) {  // Handle backspace
+            if (i > 0) {
+                i--;
+                mvwdelch(win, y, x+strlen(prompt) + i); // Delete the last character
+            }
+        } else if (i < MAX_INPUT_LENGTH - 1) {  // Add character to input
+            input[i++] = ch;
+            mvwaddch(win, y, x + strlen(prompt) + i - 1, (on_off==0)?(ch):('*')); // Display for each character
+        }
+        wrefresh(win);
+    }
+    input[i] = '\0';
+}
+
 int read_password_from_file_for_reset(char *password, size_t max_len) {
     FILE *file = fopen("passwords/password.txt", "r");
     if (!file) {
@@ -91,26 +110,8 @@ void delete_book(WINDOW *right_win){
 }
 
 void reset_password(WINDOW *right_win){
-
-    mvwprintw(right_win, 1, 2, "Enter current password : ");
-    wrefresh(right_win);
-
     char current_password[MAX_INPUT_LENGTH];
-    int ch, i = 0;
-
-    while ((ch = wgetch(right_win)) != '\n') {
-        if (ch == KEY_BACKSPACE || ch == 127) {  // Handle backspace
-            if (i > 0) {
-                i--;
-                mvwdelch(right_win, 1, 27 + i); // Delete the last character
-            }
-        } else if (i < MAX_INPUT_LENGTH - 1) {  // Add character to input
-            current_password[i++] = ch;
-            mvwaddch(right_win, 1, 27 + i - 1, '*'); // Display '*' for each character
-        }
-        wrefresh(right_win);
-    }
-    current_password[i] = '\0';
+    take_input_assign_value(right_win, "Enter current password : ", current_password, 1, 2, 1);
 
     char stored_password[MAX_INPUT_LENGTH];
     if (read_password_from_file_for_reset(stored_password, sizeof(stored_password)) != 0) {
@@ -119,30 +120,13 @@ void reset_password(WINDOW *right_win){
     }
 
     if (strcmp(current_password, stored_password) == 0) {        // resetting password
-        mvwprintw(right_win, 3, 2, "Enter new password : ");
-        wrefresh(right_win);
-
         char new_password[MAX_INPUT_LENGTH];
-        int ch, i = 0;
-
-        while ((ch = wgetch(right_win)) != '\n') {
-            if (ch == KEY_BACKSPACE || ch == 127) {  // Handle backspace
-                if (i > 0) {
-                    i--;
-                    mvwdelch(right_win, 3, 23 + i); // Delete the last character
-                }
-            } else if (i < MAX_INPUT_LENGTH - 1) {  // Add character to input
-                new_password[i++] = ch;
-                mvwaddch(right_win, 3, 23 + i - 1, ch); // Display 'ch' for each character
-            }
-            wrefresh(right_win);
-        }
-        new_password[i] = '\0';
+        take_input_assign_value(right_win, "Enter new password : ", new_password, 4, 2, 0);
 
         change_password("passwords/password.txt", new_password);    
 
         mvwprintw(right_win, 6, 2, "Password changed Successfully!!!");
-        wrefresh(right_win);    
+        wrefresh(right_win);
 
         napms(1500);  // Pause to show message
 
@@ -160,7 +144,7 @@ void display_all_books(WINDOW *right_win) {
     printf("displaying all books");
 }
 
-  
+
 
 
 void main_loop(int men, WINDOW *win){
