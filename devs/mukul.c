@@ -85,29 +85,84 @@ char* draw_input_box(WINDOW *win, int width, const char *prompt, int max_len) {
 
 
 void add_book(WINDOW *right_win){
-    printf("into add book");
+    char book_name[MAX_INPUT_LENGTH];
+    take_input_assign_value(right_win, "Enter book name : ", book_name, 1, 2, 0);
+    if (is_book_present(book_name, "database/books.txt")) {
+        mvwprintw(right_win, 4, 2, "Book already exists.");
+        wrefresh(right_win);
+        napms(1500);
+        werase(right_win);
+        box(right_win, 0, 0);
+        wrefresh(right_win);
+        return;
+
+    } else {
+        char book_number[MAX_INPUT_LENGTH];
+        take_input_assign_value(right_win, "Enter book number : ", book_number, 4, 2, 0);
+        strcat(book_name, "," );
+        strcat(book_name, book_number);
+        strcat(book_name, "\n");
+        simple_append("database/books.txt", book_name); 
+        mvwprintw(right_win, 7 , 2, "Book added successfully.");
+        wrefresh(right_win);
+        napms(1500);
+        werase(right_win);
+        box(right_win, 0, 0);
+        wrefresh(right_win);
+
+    }   
 }
 
 void search_book(WINDOW *right_win){
-    printf("into search book");
-
+    char book_name[MAX_INPUT_LENGTH];
+    take_input_assign_value(right_win, "Enter book name : ", book_name, 1, 2, 0);
+    if (is_book_present(book_name, "database/books.txt")) {
+        mvwprintw(right_win, 4, 2, "Book found.");
+        wrefresh(right_win);
+        napms(1500);
+        werase(right_win);
+        box(right_win, 0, 0);
+        wrefresh(right_win);
+    } else {
+        mvwprintw(right_win, 4, 2, "Book not found.");
+        wrefresh(right_win);
+        napms(1500);
+        werase(right_win);
+        box(right_win, 0, 0);
+        wrefresh(right_win);
+    }
 }
 
 void add_customer(WINDOW *right_win){
-    printf("into add customer");
-}
+    char customer_name[MAX_INPUT_LENGTH];
+    take_input_assign_value(right_win, "Enter customer name : ", customer_name, 1, 2, 0);
+    if (is_customer_present(customer_name, "database/customers.txt")) {
+        mvwprintw(right_win, 4, 2, "Customer already exists.");
+        wrefresh(right_win);
+        napms(1500);
+        werase(right_win);
+        box(right_win, 0, 0);
+        wrefresh(right_win);
+        return;
 
-void search_customer(WINDOW *right_win){
-    printf("search customer");
-}
-
-void delete_customer(WINDOW *right_win){
-    printf("delete search customer");
-}
-
-void delete_book(WINDOW *right_win){
-    printf("delete book");
-}
+    } else {
+        char book_name[MAX_INPUT_LENGTH];
+        take_input_assign_value(right_win, "Enter book name : ", book_name, 4, 2, 0);
+        char issue_date[MAX_INPUT_LENGTH];
+        take_input_assign_value(right_win, "Enter issue date : ", issue_date, 7, 2, 0);
+        strcat(customer_name, "," );
+        strcat(customer_name, book_name);
+        strcat(customer_name, "," );
+        strcat(customer_name, issue_date);
+        strcat(customer_name, "\n");
+        simple_append("database/customers.txt", customer_name); 
+        mvwprintw(right_win, 10  , 2, "Customer added successfully.");
+        wrefresh(right_win);
+        napms(1500);
+        werase(right_win);
+        box(right_win, 0, 0);
+        wrefresh(right_win);
+}}  
 
 void reset_password(WINDOW *right_win){
     char current_password[MAX_INPUT_LENGTH];
@@ -140,12 +195,37 @@ void reset_password(WINDOW *right_win){
     wrefresh(right_win);
 }
 
+void search_customer(WINDOW *right_win){
+    char customer_name[MAX_INPUT_LENGTH];
+    take_input_assign_value(right_win, "Enter customer name : ", customer_name, 1, 2, 0);
+    if (is_customer_present(customer_name, "database/customers.txt")) {
+        mvwprintw(right_win, 4, 2, "Customer found.");
+        wrefresh(right_win);
+        napms(1500);
+        werase(right_win);
+        box(right_win, 0, 0);
+        wrefresh(right_win);
+    } else {
+        mvwprintw(right_win, 4, 2, "Customer not found.");
+        wrefresh(right_win);
+        napms(1500);
+        werase(right_win);
+        box(right_win, 0, 0);
+        wrefresh(right_win);
+    }
+}
+
+void delete_customer(WINDOW *right_win){
+    printf("delete search customer");
+}
+
+void delete_book(WINDOW *right_win){
+    printf("delete book");
+}
+
 void display_all_books(WINDOW *right_win) {
     printf("displaying all books");
 }
-
-
-
 
 void main_loop(int men, WINDOW *win){
     switch (men){
