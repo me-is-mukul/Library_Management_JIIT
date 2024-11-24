@@ -1,7 +1,13 @@
 #include <stdio.h>
 #include<string.h>
 #include <stdlib.h>
+#include <ncurses.h>
+#include <menu.h>
 
+struct custo {
+    char *name;
+    char *issue;
+};
 void change_password(const char *filename, const char *new_password) {
 
     FILE *file = fopen(filename, "w");
@@ -119,3 +125,155 @@ void simple_append(const char *file_name, const char *data) {
     // printf("Brute force append operation completed.\n");
 }
 
+int count_lines_in_file(const char *filename) {
+    FILE *file;
+    file = fopen(filename, "r");
+    if (file == NULL) {
+        perror("Error opening file");
+        return -1;
+    }
+
+    int line_count = 0;
+    char ch;
+    char last_char = '\0';
+    char current_char;
+
+    while (1) {
+        ch = fgetc(file);
+        current_char = ch;
+
+        if (ch == EOF) {
+            if (last_char != '\n' && last_char != '\0') {
+                line_count += 1;
+            }
+            break;
+        }
+
+        if (ch == '\n') {
+            line_count = line_count + 1;
+        }
+
+        last_char = current_char;
+    }
+
+    int file_close_result;
+    file_close_result = fclose(file);
+    if (file_close_result != 0) {
+        perror("Error closing file");
+    }
+
+    int result_to_return;
+    result_to_return = line_count;
+
+    return result_to_return;
+}
+
+void get_all_custo(const char *filename, const char *customer_name, char *arr[]) 
+{
+    struct custo buffer;
+    FILE *fptr = fopen(filename, "r");
+    if (fptr == NULL) {
+        perror("Error opening file");
+        return;
+    }
+
+    buffer.name = NULL;
+    buffer.issue = NULL;
+    int k = 0; // Index for arr
+    char line[2048]; // Temporary buffer for a line
+
+    while (fgets(line, sizeof(line), fptr)) {
+        char *token = strtok(line, ","); // Extract name
+        if (token == NULL) continue;
+
+        // Allocate memory for name
+        buffer.name = (char *)malloc((strlen(token) + 1) * sizeof(char));
+        if (buffer.name == NULL) {
+            perror("Memory allocation failed");
+            fclose(fptr);
+            return;
+        }
+        strcpy(buffer.name, token);
+
+        token = strtok(NULL, "\n"); // Extract issue
+        if (token == NULL) {
+            free(buffer.name); // Free name if issue is missing
+            continue;
+        }
+
+        // Allocate memory for issue
+        buffer.issue = (char *)malloc((strlen(token) + 1) * sizeof(char));
+        if (buffer.issue == NULL) {
+            perror("Memory allocation failed");
+            free(buffer.name);
+            fclose(fptr);
+            return;
+        }
+        strcpy(buffer.issue, token);
+
+        // Compare names
+        if (strcmp(buffer.name, customer_name) == 0) {
+            int name_len = strlen(buffer.name);
+            int issue_len = strlen(buffer.issue);
+
+            arr[k] = (char *)malloc((name_len + issue_len + 2) * sizeof(char));
+            if (arr[k] == NULL) {
+                perror("Memory allocation failed");
+                free(buffer.name);
+                free(buffer.issue);
+                fclose(fptr);
+                return;
+            }
+
+            // Format the output: name + ',' + issue + '\0'
+            snprintf(arr[k], name_len + issue_len + 2, "%s,%s", buffer.name, buffer.issue);
+            k++;
+        }
+
+        // Free allocated memory for current buffer
+        free(buffer.name);
+        free(buffer.issue);
+        buffer.name = NULL;
+        buffer.issue = NULL;
+    }
+
+    fclose(fptr);
+    arr[k] = NULL; // Null-terminate the array
+}
+
+
+char* draw_input_box(WINDOW *win, int width, const char *prompt, int max_len) {
+    int ch, pos = 0;
+    int start_x = 2;  // Position for the prompt and input
+
+    // Allocate memory for the input string
+    char *input = (char *)malloc(max_len * sizeof(char));
+    if (!input) {
+        return NULL; // Return NULL if memory allocation fails
+    }
+    memset(input, 0, max_len); // Initialize input buffer
+
+    // Draw a border around the input box
+    box(win, 0, 0);
+    mvwprintw(win, 1, start_x, "%s", prompt);  // Print the prompt at the top of the box
+    wrefresh(win);
+
+    // Capture user input until Enter is pressed or max_len is reached
+    while ((ch = wgetch(win)) != '\n') {
+        if (ch == KEY_BACKSPACE || ch == 127) {  // Handle backspace
+            if (pos > 0) {
+                pos--;
+                input[pos] = '\0';
+                mvwaddch(win, 2, start_x + strlen(prompt) + pos, ' ');  // Clear character from screen
+                wmove(win, 2, start_x + strlen(prompt) + pos);  // Move cursor back
+            }
+        } else if (pos < max_len - 1 && ch >= 32 && ch <= 126) {  // Allow only printable characters
+            input[pos++] = ch;
+            mvwaddch(win, 2, start_x + strlen(prompt) + pos - 1, ch);  // Display character in box
+        }
+        wrefresh(win);  // Refresh to show changes
+    }
+    input[pos] = '\0';  // Null-terminate the input string
+
+    return input;  // Return the input string
+}

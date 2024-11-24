@@ -3,6 +3,7 @@
 #include <string.h>
 #include "ambar.h"
 #include "dhvani.h"
+#include <menu.h>
 
 #define MAX_INPUT_LENGTH 100
 
@@ -45,42 +46,6 @@ int read_password_from_file_for_reset(char *password, size_t max_len) {
     password[strcspn(password, "\n")] = '\0';
     fclose(file);
     return 0;
-}
-
-char* draw_input_box(WINDOW *win, int width, const char *prompt, int max_len) {
-    int ch, pos = 0;
-    int start_x = 2;  // Position for the prompt and input
-
-    // Allocate memory for the input string
-    char *input = (char *)malloc(max_len * sizeof(char));
-    if (!input) {
-        return NULL; // Return NULL if memory allocation fails
-    }
-    memset(input, 0, max_len); // Initialize input buffer
-
-    // Draw a border around the input box
-    box(win, 0, 0);
-    mvwprintw(win, 1, start_x, "%s", prompt);  // Print the prompt at the top of the box
-    wrefresh(win);
-
-    // Capture user input until Enter is pressed or max_len is reached
-    while ((ch = wgetch(win)) != '\n') {
-        if (ch == KEY_BACKSPACE || ch == 127) {  // Handle backspace
-            if (pos > 0) {
-                pos--;
-                input[pos] = '\0';
-                mvwaddch(win, 2, start_x + strlen(prompt) + pos, ' ');  // Clear character from screen
-                wmove(win, 2, start_x + strlen(prompt) + pos);  // Move cursor back
-            }
-        } else if (pos < max_len - 1 && ch >= 32 && ch <= 126) {  // Allow only printable characters
-            input[pos++] = ch;
-            mvwaddch(win, 2, start_x + strlen(prompt) + pos - 1, ch);  // Display character in box
-        }
-        wrefresh(win);  // Refresh to show changes
-    }
-    input[pos] = '\0';  // Null-terminate the input string
-
-    return input;  // Return the input string
 }
 
 
@@ -136,33 +101,23 @@ void search_book(WINDOW *right_win){
 void add_customer(WINDOW *right_win){
     char customer_name[MAX_INPUT_LENGTH];
     take_input_assign_value(right_win, "Enter customer name : ", customer_name, 1, 2, 0);
-    if (is_customer_present(customer_name, "database/customers.txt")) {
-        mvwprintw(right_win, 4, 2, "Customer already exists.");
-        wrefresh(right_win);
-        napms(1500);
-        werase(right_win);
-        box(right_win, 0, 0);
-        wrefresh(right_win);
-        return;
-
-    } else {
-        char book_name[MAX_INPUT_LENGTH];
-        take_input_assign_value(right_win, "Enter book name : ", book_name, 4, 2, 0);
-        char issue_date[MAX_INPUT_LENGTH];
-        take_input_assign_value(right_win, "Enter issue date : ", issue_date, 7, 2, 0);
-        strcat(customer_name, "," );
-        strcat(customer_name, book_name);
-        strcat(customer_name, "," );
-        strcat(customer_name, issue_date);
-        strcat(customer_name, "\n");
-        simple_append("database/customers.txt", customer_name); 
-        mvwprintw(right_win, 10  , 2, "Customer added successfully.");
-        wrefresh(right_win);
-        napms(1500);
-        werase(right_win);
-        box(right_win, 0, 0);
-        wrefresh(right_win);
-}}  
+    char book_name[MAX_INPUT_LENGTH];
+    take_input_assign_value(right_win, "Enter book name : ", book_name, 4, 2, 0);
+    char issue_date[MAX_INPUT_LENGTH];
+    take_input_assign_value(right_win, "Enter issue date : ", issue_date, 7, 2, 0);
+    strcat(customer_name, "," );
+    strcat(customer_name, book_name);
+    strcat(customer_name, "," );
+    strcat(customer_name, issue_date);
+    strcat(customer_name, "\n");
+    simple_append("database/customers.txt", customer_name); 
+    mvwprintw(right_win, 10  , 2, "Customer added successfully.");
+    wrefresh(right_win);
+    napms(1500);
+    werase(right_win);
+    box(right_win, 0, 0);
+    wrefresh(right_win);
+}
 
 void reset_password(WINDOW *right_win){
     char current_password[MAX_INPUT_LENGTH];
@@ -195,13 +150,63 @@ void reset_password(WINDOW *right_win){
     wrefresh(right_win);
 }
 
-void search_customer(WINDOW *right_win){
+void search_customer(WINDOW *right_win) {        
     char customer_name[MAX_INPUT_LENGTH];
+    int lines = count_lines_in_file("database/customers.txt");
     take_input_assign_value(right_win, "Enter customer name : ", customer_name, 1, 2, 0);
+    
     if (is_customer_present(customer_name, "database/customers.txt")) {
-        mvwprintw(right_win, 4, 2, "Customer found.");
+        char *input[lines];
+        get_all_custo("database/customers.txt", customer_name, input);
+        
+        int item_count = 0; 
+        while (input[item_count] != NULL) { 
+            item_count++; 
+        }
+
+        if (item_count == 0) {
+            mvwprintw(right_win, 4, 2, "No matching records found.");
+            wrefresh(right_win);
+            napms(1500);
+            werase(right_win);
+            box(right_win, 0, 0);
+            wrefresh(right_win);
+            return;
+        }
+
+        ITEM *itemss[item_count + 1];
+        for (int i = 0; i < item_count; ++i) {
+            itemss[i] = new_item(input[i], NULL);
+        }
+        itemss[item_count] = NULL;
+
+        MENU *menuu = new_menu(itemss);
+        set_menu_win(menuu, right_win);
+        set_menu_sub(menuu, derwin(right_win, 20, 40, 13, 30));
+        set_menu_mark(menuu, " -> ");
+        box(right_win, 0, 0);
+        post_menu(menuu);
         wrefresh(right_win);
-        napms(1500);
+
+        int ch;
+        while ((ch = getch()) != 'q') { 
+            switch (ch) {
+                case KEY_DOWN:
+                    menu_driver(menuu, REQ_DOWN_ITEM);
+                    break;
+                case KEY_UP:
+                    menu_driver(menuu, REQ_UP_ITEM);
+                    break;
+            }
+            wrefresh(right_win);
+        }
+
+        unpost_menu(menuu);
+        free_menu(menuu);
+        for (int i = 0; i < item_count; ++i) {
+            free_item(itemss[i]);
+            free(input[i]); // Free memory for each string
+        }
         werase(right_win);
         box(right_win, 0, 0);
         wrefresh(right_win);
@@ -216,18 +221,106 @@ void search_customer(WINDOW *right_win){
 }
 
 void delete_customer(WINDOW *right_win){
-    printf("delete search customer");
+    char customer_name[MAX_INPUT_LENGTH];
+    take_input_assign_value(right_win, "Enter customer name : ", customer_name, 1, 2, 0);
+    if (is_customer_present(customer_name, "database/customers.txt")) {
+        deleterow("database/customers.txt", customer_name);
+        mvwprintw(right_win, 4, 2, "Customer deleted successfully.");
+        wrefresh(right_win);
+        napms(1500);
+        werase(right_win);
+        box(right_win, 0, 0);
+        wrefresh(right_win);
+    } else {
+        mvwprintw(right_win, 4, 2, "Customer not found.");
+        wrefresh(right_win);
+        napms(1500);
+        werase(right_win);
+        box(right_win, 0, 0);
+        wrefresh(right_win);
+    }
 }
-
-void delete_book(WINDOW *right_win){
-    printf("delete book");
+    
+void display_all_customers(WINDOW *right_win){
+    int lines = count_lines_in_file("database/customers.txt");
+    char *input[lines];
+    pass_list_from_file("database/customers.txt", input);
+    ITEM *  itemss[lines+1];
+    for (int i = 0; i < lines; ++i) {
+        itemss[i] = new_item(input[i], NULL);
+    }
+    itemss[lines] = NULL;
+    // Create menu and associate it with the left window
+    MENU *menuu = new_menu(itemss);
+    set_menu_win(menuu, right_win);
+    set_menu_sub(menuu, derwin(right_win, 20, 40, 13, 30));
+    set_menu_mark(menuu, " -> ");
+    box(right_win, 0, 0);              // Draw the box with colored border
+    post_menu(menuu);
+    wrefresh(right_win);
+    int ch;
+    while ((ch = getch()) != 'q') { // Press 'q' to exit
+        switch (ch) {
+            case KEY_DOWN:
+                menu_driver(menuu, REQ_DOWN_ITEM);
+                break;
+            case KEY_UP:
+                menu_driver(menuu, REQ_UP_ITEM);
+                break;
+            case KEY_NPAGE:
+                menu_driver(menuu, REQ_SCR_DPAGE);
+                break;
+            case KEY_PPAGE:
+                menu_driver(menuu, REQ_SCR_UPAGE);
+                break;
+        }
+        wrefresh(right_win);
+    }
+    werase(right_win);
+    box(right_win, 0, 0);
+    wrefresh(right_win);
+    endwin();
 }
 
 void display_all_books(WINDOW *right_win) {
-    printf("displaying all books");
+    int lines = count_lines_in_file("database/books.txt");
+    char *input[lines];
+    char *input2[lines];
+    pass_list_from_file("database/books.txt", input);
+    // tabulate_each_element(input2, input);
+    ITEM *  itemss[lines+1];
+    for (int i = 0; i < lines; ++i) {
+        itemss[i] = new_item(input[i], NULL);
+    }
+    itemss[lines] = NULL;
+    // Create menu and associate it with the left window
+    MENU *menuu = new_menu(itemss);
+    set_menu_win(menuu, right_win);
+    set_menu_sub(menuu, derwin(right_win, 20, 40, 13, 30));
+    set_menu_mark(menuu, " -> ");
+    box(right_win, 0, 0);              // Draw the box with colored border
+    post_menu(menuu);
+    wrefresh(right_win);
+    int ch;
+    while ((ch = getch()) != 'q') { // Press 'q' to exit
+        switch (ch) {
+            case KEY_DOWN: // Switch focus with enter key
+                menu_driver(menuu, REQ_DOWN_ITEM);
+                break;
+            case KEY_UP:
+                menu_driver(menuu, REQ_UP_ITEM);
+                break;
+        }
+        wrefresh(right_win);
+    }
+    werase(right_win);
+    box(right_win, 0, 0);
+    wrefresh(right_win);
+    endwin();
+
 }
 
-void main_loop(int men, WINDOW *win){
+void main_loop(int men, WINDOW *win){   
     switch (men){
         case 1:
             add_book(win);
@@ -245,7 +338,7 @@ void main_loop(int men, WINDOW *win){
             delete_customer(win);
             break;
         case 6:
-            delete_book(win);
+            display_all_customers(win);
             break;
         case 7:
             reset_password(win);
