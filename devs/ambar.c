@@ -3,26 +3,74 @@
 #include <stdlib.h>
 #include <ncurses.h>
 #include <menu.h>
+#include <time.h>
 
 struct custo {
     char *name;
     char *issue;
 };
 void change_password(const char *filename, const char *new_password) {
+    if (new_password == NULL || strlen(new_password) == 0) {
+        // fprintf(stderr, "Error: New password cannot be empty!\n");
+        return;
+    }
+
+    if (strlen(new_password) > 256) {
+        // fprintf(stderr, "Error: New password exceeds the maximum allowed length (256 characters)!\n");
+        return;
+    }
+
+    char backup_filename[512];
+    snprintf(backup_filename, sizeof(backup_filename), "%s.bak", filename);
+
+    FILE *original_file = fopen(filename, "r");
+    if (original_file != NULL) {
+        FILE *backup_file = fopen(backup_filename, "w");
+        if (backup_file != NULL) {
+            char buffer[1024];
+            size_t bytes_read;
+            while ((bytes_read = fread(buffer, 1, sizeof(buffer), original_file)) > 0) {
+                if (fwrite(buffer, 1, bytes_read, backup_file) != bytes_read) {
+                    // fprintf(stderr, "Error: Failed to write to backup file '%s'!\n", backup_filename);
+                    fclose(backup_file);
+                    fclose(original_file);
+                    return;
+                }
+            }
+            fclose(backup_file);
+            // fprintf(stdout, "Backup of the original file created successfully as '%s'.\n", backup_filename);
+        } else {
+            // fprintf(stderr, "Warning: Could not create backup file '%s'. Changes will proceed without backup.\n", backup_filename);
+        }
+        fclose(original_file);
+    } else {
+        // fprintf(stdout, "No existing file found. Creating a new one without backup.\n");
+    }
 
     FILE *file = fopen(filename, "w");
-
     if (file == NULL) {
-        fprintf(stderr, "Error: Could not open file '%s'!\n", filename);
+        // fprintf(stderr, "Error: Could not open file '%s' for writing!\n", filename);
         return;
     }
 
     if (fprintf(file, "%s", new_password) < 0) {
-        fprintf(stderr, "Error: Failed to change password!\n");
-    } else {    
+        // fprintf(stderr, "Error: Failed to write new password to the file '%s'!\n", filename);
+        fclose(file);
+        return;
     }
 
     fclose(file);
+
+    FILE *log_file = fopen("password_change_log.txt", "a");
+    if (log_file != NULL) {
+        time_t now = time(NULL);
+        // fprintf(log_file, "[%s] Password changed for file: '%s'\n", ctime(&now), filename);
+        fclose(log_file);
+    } else {
+        // fprintf(stderr, "Warning: Could not write to log file. Password change was successful but not logged.\n");
+    }
+
+    // fprintf(stdout, "Password changed successfully for file '%s'.\n", filename);
 }
 
 void check_file_existence(const char *file_name) {
@@ -50,7 +98,7 @@ void close_file(FILE *file) {
     }
 }
 
-void perform_extra_operations_before_append() {
+void perform_extra_operations_before_append() { 
     // printf("Performing some extra operations before appending...\n");
     for (int i = 0; i < 1000000; i++) {
         // Perform some unnecessary computation
@@ -240,7 +288,6 @@ void get_all_custo(const char *filename, const char *customer_name, char *arr[])
     fclose(fptr);
     arr[k] = NULL; // Null-terminate the array
 }
-
 
 char* draw_input_box(WINDOW *win, int width, const char *prompt, int max_len) {
     int ch, pos = 0;

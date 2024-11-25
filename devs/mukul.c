@@ -141,7 +141,7 @@ void reset_password(WINDOW *right_win){
         napms(1500);  // Pause to show message
 
     } else {         // wrong password
-        mvwprintw(right_win, 4, 2, "Wrong Password Bhosdike!");
+        mvwprintw(right_win, 4, 2, "Wrong Password Sorry!!");
         wrefresh(right_win);
         napms(1500);  // Pause to show message
     }   

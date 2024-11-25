@@ -136,6 +136,7 @@ void pass_list_from_file(const char *file_name, char *array[])
 }
 
 void tabulate_each_element(char *array1[], char *array2[])
+// we were not able to implement it
 {
     int lines = 0;
     for (int i = 0; array1[i] != NULL; i++)
